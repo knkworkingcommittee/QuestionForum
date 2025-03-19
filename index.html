@@ -4,34 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Q&A</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-</head>
-<body>
-    <h2>Ask a Question</h2>
-    <input type="text" id="name" placeholder="Your Name">
-    <input type="text" id="question" placeholder="Your Question">
-    <button onclick="postQuestion()">Submit</button>
-
-    <h2>Live Questions</h2>
-    <ul id="questions"></ul>
-
     <script>
-        var socket = io();
-
-        function postQuestion() {
-            var name = document.getElementById("name").value;
-            var question = document.getElementById("question").value;
-            if (name && question) {
-                socket.emit("post_question", { name: name, question: question });
+        async function submitQuestion(event) {
+            event.preventDefault();
+            let question = document.getElementById("question").value;
+            
+            if (question.trim() !== "") {
+                await fetch('/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+                document.getElementById("question").value = "";
+                fetchQuestions(); // Refresh the question list
             }
         }
 
-        socket.on("new_question", function(data) {
-            var list = document.getElementById("questions");
-            var item = document.createElement("li");
-            item.innerHTML = `<b>${data.name}:</b> ${data.question}`;
-            list.appendChild(item);
-        });
+        async function fetchQuestions() {
+            let response = await fetch('/questions');
+            let questions = await response.json();
+            let questionList = document.getElementById("question-list");
+            questionList.innerHTML = "";
+            questions.forEach(q => {
+                let li = document.createElement("li");
+                li.textContent = q;
+                questionList.appendChild(li);
+            });
+        }
+
+        setInterval(fetchQuestions, 2000); // Auto-refresh every 2 seconds
     </script>
+</head>
+<body onload="fetchQuestions()">
+    <h1>Live Q&A</h1>
+    
+    <form onsubmit="submitQuestion(event)">
+        <input type="text" id="question" placeholder="Enter your question" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    <h2>Attendee Questions:</h2>
+    <ul id="question-list"></ul>
 </body>
 </html>
